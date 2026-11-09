@@ -44,6 +44,10 @@ dsh --profile web --dump-config | grep -A2 'dsh-lan-models'
 
 > 面板只在 Web profile 出现（需要 `webServer` 服务）；headless/ACP profile 只有工具。
 > 装载后 `llm-pi-ai` 会按配置重建 provider，**无需重启**；装载第一次后如果模型选择器没刷新，重开一次选择器即可。
+>
+> 扫描只覆盖本机网段，发现不了只绑 `127.0.0.1` 的服务（oMLX 默认如此）。这类服务用面板的
+> 「手动装载地址」：先 `ssh -f -N -L 18000:127.0.0.1:8000 <mac>` 建隧道，再填 `http://127.0.0.1:18000`。
+> 隧道断开后该 provider 的请求会失败，长期方案是让服务监听 `0.0.0.0` 后按局域网地址装载。
 
 ## 工具面（模型可调用）
 
