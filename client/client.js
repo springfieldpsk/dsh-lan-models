@@ -21,6 +21,7 @@ window.__ModuleLoader__.load({
         empty: '没有发现可用的模型服务。确认服务已启动并监听 0.0.0.0，或在插件配置里补 staticHosts。',
         services: '发现的服务',
         mounted: '已装载',
+        mountedTag: '已装载',
         noneMounted: '还没有装载任何模型。',
         load: '装载',
         loading2: '装载中…',
@@ -42,6 +43,7 @@ window.__ModuleLoader__.load({
         empty: 'No model service found. Start one listening on 0.0.0.0, or add staticHosts to the plugin config.',
         services: 'Discovered services',
         mounted: 'Mounted',
+        mountedTag: 'mounted',
         noneMounted: 'Nothing mounted yet.',
         load: 'Mount',
         loading2: 'mounting…',
@@ -198,18 +200,19 @@ window.__ModuleLoader__.load({
                 : null,
             ),
             isChat
-              ? h(
-                  'button',
-                  {
-                    style: mountedThis ? btn : btnPrimary,
-                    disabled: busyId !== '',
-                    onClick: function () {
-                      if (mountedThis) return;
-                      act('/lan-models/mount', { key: svc.key }, svc.key);
+              ? mountedThis
+                ? h('span', { style: Object.assign({}, dim, { fontSize: '12px' }) }, t.mountedTag)
+                : h(
+                    'button',
+                    {
+                      style: btnPrimary,
+                      disabled: busyId !== '',
+                      onClick: function () {
+                        act('/lan-models/mount', { key: svc.key }, svc.key);
+                      },
                     },
-                  },
-                  mountedThis ? t.load : busyId === svc.key ? t.loading2 : t.load,
-                )
+                    busyId === svc.key ? t.loading2 : t.load,
+                  )
               : h('span', { style: dim }, t.notChat),
           );
         });
