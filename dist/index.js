@@ -10,6 +10,7 @@ import { LanRegistry } from './discovery/registry.js';
 import { registerTools } from './tools.js';
 import { registerCommands } from './commands.js';
 import { registerSkills } from './skills.js';
+import { registerLanPanelRoutes } from './panel/routes.js';
 export const name = 'dsh-lan-models';
 export const inject = ['tools'];
 export { Config };
@@ -33,4 +34,19 @@ export function apply(ctx, config) {
     const skills = ctx.get?.('skills');
     registerCommands(commands, config, registry);
     registerSkills(skills, config);
+    // The settings panel's data routes exist only where a web server does; the
+    // headless profiles keep the tools and lose nothing else.
+    const inject = ctx.inject;
+    if (typeof inject === 'function') {
+        inject.call(ctx, ['webServer'], (scope) => {
+            try {
+                const dispose = registerLanPanelRoutes(scope, registry, config);
+                if (typeof scope.effect === 'function')
+                    scope.effect(() => dispose, 'lan-models: panel routes');
+            }
+            catch (error) {
+                console.error(`[lan-models] panel routes skipped: ${error}`);
+            }
+        });
+    }
 }

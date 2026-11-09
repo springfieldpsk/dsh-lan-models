@@ -1,12 +1,21 @@
 {
   "name": "dsh-lan-models",
-  "version": "0.1.1",
-  "description": "LAN local-model mesh for DeepSeek Harness: discover model services across machines, query status, drive ComfyUI image/video generation, and route chat to LAN LLMs.",
+  "version": "0.2.0",
+  "description": "LAN local-model mesh for DeepSeek Harness: discover model services across machines, mount LAN LLMs as selectable dsh models, query status, and drive ComfyUI image/video generation.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": "./client/client.js",
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
+    "client",
     "cordis.patch.yml",
     "README.md"
   ],
@@ -32,6 +41,11 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [],
+      "platform": "web",
+      "immediately": true
     }
   },
   "peerDependencies": {

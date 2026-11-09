@@ -17,8 +17,8 @@
 # 方式一：本地目录
 dsh plugin --profile web add ~/dsh-lan-models
 
-# 方式二：git（pin commit 更稳）
-dsh plugin --profile web add github:<you>/dsh-lan-models
+# 方式二：git（dist 已提交，装完即可用）
+dsh plugin --profile web add github:springfieldpsk/dsh-lan-models
 
 # 方式三：npm 发布后
 dsh plugin --profile web add dsh-lan-models
@@ -30,8 +30,20 @@ dsh plugin --profile web add dsh-lan-models
 dsh --profile web --dump-config | grep -A2 'dsh-lan-models'
 ```
 
-> git/本地目录安装会触发 `prepare` 构建；若 profile 的 pnpm 拦截构建脚本，在 profile 的
-> `pnpm-workspace.yaml` 加 `allowBuilds: { dsh-lan-models: true }`。
+> 仓库里带了 `dist/`，`github:` 安装不需要构建脚本（`prepack` 只在 npm publish 前重编译）。
+> 改源码后记得 `npm run build` 再提交，否则 git 安装拿到的是旧产物。
+
+## 控制面板（设置 → 局域网模型）
+
+插件在 dsh Web 的「设置」里注册一页 **局域网模型**（`settings.section`），用来把局域网 LLM 装载成 dsh 可选模型：
+
+- 列表来自 `lan_scan` 的结果（只显示 OpenAI 兼容服务；ComfyUI 标为「非对话服务」）；
+- **装载** = 往 `llm-pi-ai` 的 `providers` 写一条路由（`api: openai-completions`、`baseURL: <服务>/v1`、`models` 用服务 `/v1/models` 的清单），随后在模型选择器里就能切到它；
+- **卸载** = 删除本插件写的 `lan-*` 路由，其他 provider 原样保留；
+- 页面数据走插件自己的回环路由 `/lan-models/state|mount|unmount`（仅同源回环可访问），不额外暴露远程 RPC。
+
+> 面板只在 Web profile 出现（需要 `webServer` 服务）；headless/ACP profile 只有工具。
+> 装载后 `llm-pi-ai` 会按配置重建 provider，**无需重启**；装载第一次后如果模型选择器没刷新，重开一次选择器即可。
 
 ## 工具面（模型可调用）
 
