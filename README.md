@@ -56,11 +56,11 @@ profile 的 `cordis.patch.yml` 中给插件加 `config:`（Schemastery 校验）
   name: dsh-lan-models
   config:
     extraCidrs:
-      - 192.168.5.0/24
+      - 192.168.1.0/24
     staticHosts:
       - url: http://127.0.0.1:8000
         alias: mac-llm        # oMLX 绑 127.0.0.1，扫描发现不了，必须静态声明
-      - url: http://192.168.5.115:8188
+      - url: http://192.168.1.100:8188
         alias: mac-comfy
     ports: [8000, 8080, 8188, 11434, 1234, 7860, 9997]
     imageTimeoutMinutes: 10
