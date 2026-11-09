@@ -24,7 +24,7 @@ export interface RegistryOptions {
   cacheTtlMs?: number
 }
 
-export const DEFAULT_PORTS = [8000, 8080, 8188, 11434, 1234, 7860, 9997]
+export const DEFAULT_PORTS = [8000, 8080, 8188, 8888, 11434, 1234, 7860, 9997]
 
 export class LanRegistry {
   private opts: Required<Pick<RegistryOptions, 'ports' | 'tcpTimeoutMs' | 'httpTimeoutMs' | 'concurrency' | 'cacheTtlMs'>> &
@@ -56,9 +56,11 @@ export class LanRegistry {
   }
 
   private async doScan(extraCidr?: string): Promise<ServiceRecord[]> {
-    const cidrs = this.opts.cidrsOnly?.length
-      ? [...this.opts.cidrsOnly]
-      : [...detectLocalCidrs(), ...(this.opts.cidrs ?? []), ...(extraCidr ? [extraCidr] : [])]
+    // `cidrsOnly` set (even to []) disables auto-detection entirely.
+    const cidrs =
+      this.opts.cidrsOnly !== undefined
+        ? [...this.opts.cidrsOnly, ...(extraCidr ? [extraCidr] : [])]
+        : [...detectLocalCidrs(), ...(this.opts.cidrs ?? []), ...(extraCidr ? [extraCidr] : [])]
     const hosts = new Set<string>()
     for (const cidr of cidrs) {
       try {

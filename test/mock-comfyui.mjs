@@ -54,7 +54,7 @@ export function startMockComfyUI(port = 0) {
         setTimeout(() => {
           done.set(promptId, { outputs: { '7': { images: [{ filename: 'mock_out_00001_.png', subfolder: '', type: 'output' }] } } })
         }, 200)
-        send(200, { prompt_id: promptId, number: 1 })
+        send(200, { prompt_id: promptId, number: 1, node_errors: {} })
       })
       return
     }

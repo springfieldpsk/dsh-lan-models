@@ -88,12 +88,13 @@ export class ComfyClient {
       error?: { message?: string; type?: string }
       node_errors?: Record<string, { errors: { type: string; message: string; details?: string }[] }>
     }
-    if (!res.ok || json.error || json.node_errors) {
-      const nodeErrors = json.node_errors ?? {}
+    // A successful /prompt response also carries `node_errors: {}` — only a
+    // non-empty map (or an `error` object) means rejection.
+    const nodeErrors = json.node_errors ?? {}
+    const hasNodeErrors = Object.keys(nodeErrors).length > 0
+    if (!res.ok || json.error || hasNodeErrors) {
       const err = new Error(
-        `ComfyUI rejected workflow: ${json.error?.message ?? res.status}${
-          Object.keys(nodeErrors).length ? ` (nodes: ${Object.keys(nodeErrors).join(', ')})` : ''
-        }`,
+        `ComfyUI rejected workflow: ${json.error?.message ?? res.status}${hasNodeErrors ? ` (nodes: ${Object.keys(nodeErrors).join(', ')})` : ''}`,
       ) as ComfyModelError
       err.nodeErrors = nodeErrors
       throw err

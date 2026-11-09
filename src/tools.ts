@@ -202,7 +202,16 @@ export function registerTools(tools: ToolRegistryLike, config: Config, registry:
       onTick: (q) => void q,
     })
     if (entry.status && entry.status.status_str && entry.status.status_str !== 'success' && Object.keys(entry.outputs ?? {}).length === 0) {
-      return json({ error: `ComfyUI reported status "${entry.status.status_str}" for prompt ${promptId}`, promptId, node: target.key })
+      // Surface the server-side execution_error (node type + exception) for fast diagnosis.
+      const messages = (entry.status.messages ?? []) as unknown[]
+      const execErr = messages.find((m) => Array.isArray(m) && String(m[0]).includes('execution_error')) as
+        | { node_type?: string; exception_message?: string; exception_type?: string }
+        | undefined
+      return json({
+        error: `ComfyUI execution failed${execErr ? ` at ${execErr.node_type ?? '?'}: ${execErr.exception_message ?? execErr.exception_type}` : ` with status "${entry.status.status_str}"`}`,
+        promptId,
+        node: target.key,
+      })
     }
     const saved = await saveOutputs(client, entry, outputsDir, resolved.name)
     return json({

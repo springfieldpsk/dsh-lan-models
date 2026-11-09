@@ -1,11 +1,80 @@
 {
-  "1": { "class_type": "UNETLoader", "inputs": { "unet_name": "", "weight_dtype": "default" }, "_meta": { "title": "Load Diffusion Model (qwen_image)" } },
-  "2": { "class_type": "CLIPLoader", "inputs": { "clip_name": "", "type": "qwen_image" }, "_meta": { "title": "Load CLIP (qwen3vl)" } },
-  "3": { "class_type": "VAELoader", "inputs": { "vae_name": "" }, "_meta": { "title": "Load VAE" } },
-  "4": { "class_type": "ModelSamplingAuraFlow", "inputs": { "model": ["1", 0], "shift": 3.11 }, "_meta": { "title": "Shift" } },
-  "5": { "class_type": "CLIPTextEncode", "inputs": { "text": "", "clip": ["2", 0] }, "_meta": { "title": "Positive Prompt" } },
-  "6": { "class_type": "CLIPTextEncode", "inputs": { "text": "", "clip": ["2", 0] }, "_meta": { "title": "Negative Prompt" } },
-  "7": { "class_type": "EmptySD3LatentImage", "inputs": { "width": 1328, "height": 1328, "batch_size": 1 } },
+  "1": {
+    "class_type": "UNETLoader",
+    "inputs": {
+      "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "_meta": {
+      "title": "Load Diffusion Model (qwen_image)"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+      "type": "qwen_image"
+    },
+    "_meta": {
+      "title": "Load CLIP (qwen3vl)"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+    },
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3.11
+    },
+    "_meta": {
+      "title": "Shift"
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "_meta": {
+      "title": "Negative Prompt"
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1328,
+      "height": 1328,
+      "batch_size": 1
+    }
+  },
   "8": {
     "class_type": "KSampler",
     "inputs": {
@@ -15,12 +84,45 @@
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 1,
-      "model": ["4", 0],
-      "positive": ["5", 0],
-      "negative": ["6", 0],
-      "latent_image": ["7", 0]
+      "model": [
+        "4",
+        0
+      ],
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ]
     }
   },
-  "9": { "class_type": "VAEDecode", "inputs": { "samples": ["8", 0], "vae": ["3", 0] } },
-  "10": { "class_type": "SaveImage", "inputs": { "filename_prefix": "dsh_lan", "images": ["9", 0] } }
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "filename_prefix": "dsh_lan",
+      "images": [
+        "9",
+        0
+      ]
+    }
+  }
 }

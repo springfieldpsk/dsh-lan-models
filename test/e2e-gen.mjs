@@ -40,9 +40,10 @@ console.log('\n=== lan_generate_image (real) ===')
 const gen = await exec('lan_generate_image', {
   prompt: 'a tiny robot cat sitting on a local network switch, glowing LED eyes, cozy home lab shelf at night, warm bokeh, detailed, film still',
   negative: 'lowres, watermark, text, deformed',
-  width: 1024,
-  height: 1024,
+  width: 1328,
+  height: 1328,
   steps: 20,
+  workflow: 'qwen-image',
 })
 if (gen.error) {
   console.error(`gen error: ${gen.error}`)

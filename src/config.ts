@@ -40,8 +40,8 @@ export const Config: z<Config> = z.object({
   extraCidrs: z.array(z.string()).default([]).description('额外扫描的网段，如 "192.168.5.0/24"（自动探测本机网段之外的补充）'),
   ports: z
     .array(z.number().step(1).min(1).max(65535))
-    .default([8000, 8080, 8188, 11434, 1234, 7860, 9997])
-    .description('每台主机探测的端口（oMLX/vLLM 8000、llama.cpp 8080、ComfyUI 8188、Ollama 11434、LM Studio 1234 等）'),
+    .default([8000, 8080, 8188, 8888, 11434, 1234, 7860, 9997])
+    .description('每台主机探测的端口（oMLX/vLLM 8000、llama.cpp 8080、ComfyUI 8188、Windows 中继 8888、Ollama 11434、LM Studio 1234 等）'),
   tcpTimeoutMs: z.number().step(1).min(50).max(10000).default(400).description('单个 TCP 探测超时（毫秒）'),
   httpTimeoutMs: z.number().step(1).min(200).max(30000).default(2500).description('单个 HTTP 指纹识别超时（毫秒）'),
   concurrency: z.number().step(1).min(1).max(512).default(64).description('并发 TCP 探测数'),
