@@ -30,6 +30,7 @@ export function apply(ctx: Context, config: ConfigType): void {
     concurrency: config.concurrency,
     staticHosts,
     cacheTtlMs: config.cacheTtlSeconds * 1000,
+    scanDeadlineMs: config.scanDeadlineSeconds * 1000,
   })
 
   registerTools(ctx.tools, config, registry)

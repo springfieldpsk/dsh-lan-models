@@ -22,16 +22,33 @@ export interface RegistryOptions {
   concurrency?: number
   staticHosts?: StaticHost[]
   cacheTtlMs?: number
+  /** Hard upper bound for one sweep; unprobed targets are reported as truncated. */
+  scanDeadlineMs?: number
 }
 
 export const DEFAULT_PORTS = [8000, 8080, 8188, 8888, 11434, 1234, 7860, 9997]
 
+/** Upper bound on (host × port) pairs one sweep may build, guards hand-written /16s. */
+const MAX_TARGETS = 50_000
+
+export interface ScanMeta {
+  /** CIDRs actually swept by the last scan. */
+  cidrs: string[]
+  /** Host × port pairs queued / probed. */
+  targets: number
+  /** True when the deadline or MAX_TARGETS cut the sweep short. */
+  truncated: boolean
+  /** Wall-clock cost of the last scan. */
+  tookMs: number
+}
+
 export class LanRegistry {
-  private opts: Required<Pick<RegistryOptions, 'ports' | 'tcpTimeoutMs' | 'httpTimeoutMs' | 'concurrency' | 'cacheTtlMs'>> &
+  private opts: Required<Pick<RegistryOptions, 'ports' | 'tcpTimeoutMs' | 'httpTimeoutMs' | 'concurrency' | 'cacheTtlMs' | 'scanDeadlineMs'>> &
     RegistryOptions
   private cache: ServiceRecord[] | null = null
   private cacheAt = 0
   private scanning: Promise<ServiceRecord[]> | null = null
+  private meta: ScanMeta = { cidrs: [], targets: 0, truncated: false, tookMs: 0 }
 
   constructor(opts: RegistryOptions = {}) {
     this.opts = {
@@ -40,8 +57,14 @@ export class LanRegistry {
       httpTimeoutMs: opts.httpTimeoutMs ?? 2500,
       concurrency: opts.concurrency ?? 64,
       cacheTtlMs: opts.cacheTtlMs ?? 60_000,
+      scanDeadlineMs: opts.scanDeadlineMs ?? 120_000,
       ...opts,
     }
+  }
+
+  /** What the last scan covered — lets the caller report a truncated sweep. */
+  get scanMeta(): ScanMeta {
+    return this.meta
   }
 
   /** Full scan (cached for cacheTtlMs unless refresh=true). */
@@ -56,6 +79,8 @@ export class LanRegistry {
   }
 
   private async doScan(extraCidr?: string): Promise<ServiceRecord[]> {
+    const started = Date.now()
+    const deadline = started + this.opts.scanDeadlineMs
     // `cidrsOnly` set (even to []) disables auto-detection entirely.
     const cidrs =
       this.opts.cidrsOnly !== undefined
@@ -70,13 +95,30 @@ export class LanRegistry {
       }
     }
     const targets: { host: string; port: number }[] = []
-    for (const host of hosts) for (const port of this.opts.ports) targets.push({ host, port })
+    let capped = false
+    outer: for (const host of hosts) {
+      for (const port of this.opts.ports) {
+        if (targets.length >= MAX_TARGETS) {
+          capped = true
+          break outer
+        }
+        targets.push({ host, port })
+      }
+    }
 
-    const open = await mapLimit(targets, this.opts.concurrency, (t) => tcpProbe(t.host, t.port, this.opts.tcpTimeoutMs))
+    // Every probe is also bounded by what is left of the sweep deadline, so a slow
+    // segment degrades into partial results instead of an apparently hung tool call.
+    const open = await mapLimit(targets, this.opts.concurrency, async (t) => {
+      const left = deadline - Date.now()
+      if (left <= 0) return false
+      return tcpProbe(t.host, t.port, Math.min(this.opts.tcpTimeoutMs, Math.max(50, left)))
+    })
     const openTargets = targets.filter((_, i) => open[i])
 
     const found = await mapLimit(openTargets, 8, async (t) => {
-      const hit = await probeService(t.host, t.port, this.opts.httpTimeoutMs)
+      const left = deadline - Date.now()
+      if (left <= 0) return null
+      const hit = await probeService(t.host, t.port, Math.min(this.opts.httpTimeoutMs, Math.max(200, left)))
       if (!hit) return null
       const loopback = t.host === '127.0.0.1' || t.host === 'localhost' || t.host === '::1'
       const record: ServiceRecord = {
@@ -100,6 +142,12 @@ export class LanRegistry {
     const byKey = new Map<string, ServiceRecord>()
     for (const r of [...found, ...statics]) {
       if (r) byKey.set(r.key, r)
+    }
+    this.meta = {
+      cidrs,
+      targets: targets.length,
+      truncated: capped || Date.now() >= deadline,
+      tookMs: Date.now() - started,
     }
     return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key))
   }

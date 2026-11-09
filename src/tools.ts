@@ -67,17 +67,30 @@ export function registerTools(tools: ToolRegistryLike, config: Config, registry:
       output: {
         schema: { type: 'json' },
         render: (_args, value) => {
-          const v = value as { services: unknown[] }
-          return [{ type: 'text', text: `${formatScan(v.services as never)}\n\n(raw JSON in tool result)` }]
+          const v = value as { services: unknown[]; truncated?: boolean; cidrs?: string[]; targets?: number }
+          const lines = [formatScan(v.services as never)]
+          if (v.truncated) {
+            lines.push(
+              `\n⚠️ 扫描被时限截断（${v.targets ?? '?'} 个 探测目标，网段：${(v.cidrs ?? []).join(', ')}）——结果可能不完整，可调大 scanDeadlineSeconds 或缩小 extraCidrs 后 refresh 重扫。`,
+            )
+          }
+          lines.push('\n(raw JSON in tool result)')
+          return [{ type: 'text', text: lines.join('\n') }]
         },
       },
       isConcurrencySafe: () => true,
       timeoutMs: 180_000,
       execute: async (args: { refresh?: boolean; cidr?: string }, exec: ExecCtx) => {
-        const started = Date.now()
         const services = await registry.scan({ refresh: args.refresh === true, cidr: args.cidr })
         void exec
-        return json({ services, tookMs: Date.now() - started })
+        const meta = registry.scanMeta
+        return json({
+          services,
+          tookMs: meta.tookMs,
+          cidrs: meta.cidrs,
+          targets: meta.targets,
+          truncated: meta.truncated,
+        })
       },
     }),
   )

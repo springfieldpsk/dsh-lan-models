@@ -20,6 +20,8 @@ export interface Config {
   httpTimeoutMs: number
   /** Max concurrent TCP probes. */
   concurrency: number
+  /** Hard upper bound for one full sweep; partial results are reported when hit. */
+  scanDeadlineSeconds: number
   /** Services that scanning cannot see (loopback-bound) or that should always be listed. */
   staticHosts: StaticHostConfig[]
   /** Scan result cache lifetime. */
@@ -45,6 +47,13 @@ export const Config: z<Config> = z.object({
   tcpTimeoutMs: z.number().step(1).min(50).max(10000).default(400).description('单个 TCP 探测超时（毫秒）'),
   httpTimeoutMs: z.number().step(1).min(200).max(30000).default(2500).description('单个 HTTP 指纹识别超时（毫秒）'),
   concurrency: z.number().step(1).min(1).max(512).default(64).description('并发 TCP 探测数'),
+  scanDeadlineSeconds: z
+    .number()
+    .step(1)
+    .min(5)
+    .max(600)
+    .default(120)
+    .description('单次扫描的总时限（秒）；到点后用已探测结果返回并标记 truncated'),
   staticHosts: z
     .array(z.object({ url: z.string(), alias: z.string().default('') }))
     .default([{ url: 'http://127.0.0.1:8000', alias: '' }])

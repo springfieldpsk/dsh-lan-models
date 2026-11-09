@@ -1,6 +1,6 @@
 {
   "name": "dsh-lan-models",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "LAN local-model mesh for DeepSeek Harness: discover model services across machines, query status, drive ComfyUI image/video generation, and route chat to LAN LLMs.",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build && node --test test/"
+    "prepare": "npm run build",
+    "prepack": "npm run build",
+    "test": "npm run build && node --test \"test/*.test.mjs\""
   },
   "keywords": [
     "dsh",

@@ -63,6 +63,7 @@ profile 的 `cordis.patch.yml` 中给插件加 `config:`（Schemastery 校验）
       - url: http://192.168.1.100:8188
         alias: mac-comfy
     ports: [8000, 8080, 8188, 11434, 1234, 7860, 9997]
+    scanDeadlineSeconds: 120
     imageTimeoutMinutes: 10
     videoTimeoutMinutes: 60
 ```
@@ -72,6 +73,8 @@ profile 的 `cordis.patch.yml` 中给插件加 `config:`（Schemastery 校验）
 - **`staticHosts`** 用于回环绑定（oMLX 默认 127.0.0.1）或固定机器；默认含 `http://127.0.0.1:8000`
 - **产物目录**默认 `$DSH_HOME/lan-models/outputs/<时间戳>-<workflow>/`
 - 扫描并发/超时可调；/24 全网扫描默认配置下约 5–15s
+- **自动探测只扫可信网段**：跳过 `169.254/16`（APIPA）、`vEthernet/WSL/docker/tun/tap` 等虚拟网卡，并把宽于 `/23` 的网段收窄到所在 `/24`。真要扫整个 `/16`，用 `lan_scan` 的 `cidr` 参数显式指定（按字面展开）
+- **`scanDeadlineSeconds`**（默认 120s）是单次扫描的硬时限；到点返回已探测结果，工具输出会标 `truncated`，不会无限挂着
 
 ## 自定义工作流（生视频/专用生图线的正道）
 
