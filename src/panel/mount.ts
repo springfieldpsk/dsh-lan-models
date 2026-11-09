@@ -52,7 +52,21 @@ interface ConfigEditorLike {
 
 function editorOf(ctx: Context): ConfigEditorLike {
   const holder = ctx as unknown as { configEditor?: ConfigEditorLike; get?: (name: string) => unknown }
-  const editor = holder.configEditor ?? (holder.get?.('configEditor') as ConfigEditorLike | undefined)
+  // `ctx.configEditor` is a guarded getter: touching it without an `inject`
+  // declaration throws. `get()` is the unguarded lookup, so it goes first.
+  let editor: ConfigEditorLike | undefined
+  try {
+    editor = holder.get?.('configEditor') as ConfigEditorLike | undefined
+  } catch {
+    editor = undefined
+  }
+  if (!editor) {
+    try {
+      editor = holder.configEditor
+    } catch {
+      editor = undefined
+    }
+  }
   if (!editor || typeof editor.edit !== 'function') {
     throw new Error('configEditor 不可用：只有带配置编辑器的 profile 才能装载模型')
   }

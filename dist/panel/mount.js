@@ -13,7 +13,23 @@ const ROUTE_PREFIX = 'lan-';
 const PIAI_NAME = 'dsh-llm-pi-ai';
 function editorOf(ctx) {
     const holder = ctx;
-    const editor = holder.configEditor ?? holder.get?.('configEditor');
+    // `ctx.configEditor` is a guarded getter: touching it without an `inject`
+    // declaration throws. `get()` is the unguarded lookup, so it goes first.
+    let editor;
+    try {
+        editor = holder.get?.('configEditor');
+    }
+    catch {
+        editor = undefined;
+    }
+    if (!editor) {
+        try {
+            editor = holder.configEditor;
+        }
+        catch {
+            editor = undefined;
+        }
+    }
     if (!editor || typeof editor.edit !== 'function') {
         throw new Error('configEditor 不可用：只有带配置编辑器的 profile 才能装载模型');
     }

@@ -32,6 +32,9 @@ window.__ModuleLoader__.load({
         notChat: '非对话服务',
         truncated: '扫描被时限截断，结果可能不完整（调大 scanDeadlineSeconds 后重扫）。',
         failed: '操作失败',
+        manual: '手动装载地址',
+        manualPlaceholder: 'http://127.0.0.1:18000（仅监听回环的服务可用 SSH 隧道转发到本机）',
+        manualHint: '扫描发现不了 127.0.0.1 上的服务：先 ssh -L 18000:127.0.0.1:8000 <mac> 建隧道，再把 http://127.0.0.1:18000 填进来。',
         hint: '装载会写入 llm-pi-ai 的 provider 配置；卸载只删除本插件装载的 lan-* 路由。',
       },
       en: {
@@ -59,8 +62,9 @@ window.__ModuleLoader__.load({
     };
 
     function labels() {
-      var lang = (document.documentElement.lang || navigator.language || 'en').toLowerCase();
-      return lang.indexOf('zh') === 0 ? TEXT.zh : TEXT.en;
+      // This plugin ships Chinese copy only for now: the panel is a personal
+      // LAN tool, and a half-translated page reads worse than one language.
+      return TEXT.zh;
     }
 
     function Page(react, t) {
@@ -112,6 +116,9 @@ window.__ModuleLoader__.load({
         var busy = useState('');
         var busyId = busy[0];
         var setBusy = busy[1];
+        var manual = useState('');
+        var manualUrl = manual[0];
+        var setManualUrl = manual[1];
 
         var load = useCallback(function () {
           set({ loading: true, error: null, data: s.data });
@@ -247,6 +254,41 @@ window.__ModuleLoader__.load({
           header,
           errorLine,
           truncated,
+          h('div', { style: { marginTop: '16px', fontWeight: 600, fontSize: '13px' } }, t.manual),
+          h(
+            'div',
+            { style: { display: 'flex', gap: '8px', marginTop: '6px' } },
+            h('input', {
+              value: manualUrl,
+              placeholder: t.manualPlaceholder,
+              onChange: function (event) {
+                setManualUrl(event.target.value);
+              },
+              style: {
+                flex: 1,
+                minWidth: 0,
+                padding: '5px 8px',
+                borderRadius: '6px',
+                border: '1px solid var(--dsw-alias-border, rgba(127,127,127,0.3))',
+                background: 'transparent',
+                color: 'inherit',
+                fontSize: '12px',
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              },
+            }),
+            h(
+              'button',
+              {
+                style: btnPrimary,
+                disabled: busyId !== '' || String(manualUrl).trim() === '',
+                onClick: function () {
+                  act('/lan-models/mount', { key: String(manualUrl).trim() }, 'manual');
+                },
+              },
+              busyId === 'manual' ? t.loading2 : t.load,
+            ),
+          ),
+          h('div', { style: Object.assign({}, dim, { marginTop: '6px', fontSize: '12px' }) }, t.manualHint),
           h('div', { style: { marginTop: '18px', fontWeight: 600, fontSize: '13px' } }, t.services),
           s.loading && !s.data ? h('div', { style: dim }, t.loading) : null,
           !s.loading && !s.error && services.length === 0 ? h('div', { style: dim }, t.empty) : null,

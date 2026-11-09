@@ -8,9 +8,24 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import type { Config } from '../config.js'
 import type { LanRegistry } from '../discovery/registry.js'
+import { probeService, type ProbeResult } from '../discovery/probes.js'
 import { listMounted, mountProvider, providerIdFor, unmountProvider } from './mount.js'
 
 const MAX_BODY = 256 * 1024
+
+/** Probe a URL the scan does not know (loopback service behind a tunnel, fixed box, …). */
+async function probeServiceUrl(key: string): Promise<ProbeResult> {
+  let url: URL
+  try {
+    url = new URL(key)
+  } catch {
+    throw new Error(`无效的服务地址：${key}`)
+  }
+  const port = Number(url.port) || (url.protocol === 'https:' ? 443 : 80)
+  const hit = await probeService(url.hostname.replace(/^\[|\]$/g, ''), port, 5000)
+  if (!hit) throw new Error(`${key} 没有响应任何已知模型服务的指纹`)
+  return hit
+}
 
 function isLoopbackHost(hostname: string): boolean {
   return hostname === '127.0.0.1' || hostname === '::1' || hostname === 'localhost' || hostname === '[::1]'
@@ -98,23 +113,37 @@ export function registerLanPanelRoutes(ctx: Context, registry: LanRegistry, _con
           const body = await readJson(req)
           const key = typeof body?.key === 'string' ? body.key : ''
           if (key === '') throw new Error('缺少参数 key（服务地址，如 http://192.168.5.115:8000）')
+
+          // A scanned service is used as-is; otherwise the URL is probed directly, which
+          // is how a loopback-bound model behind an SSH tunnel gets mounted without
+          // touching the profile's staticHosts.
           const services = await registry.scan({})
           const record = services.find((r) => r.key === key)
-          if (!record) throw new Error(`未找到服务 ${key}，先刷新扫描`)
-          if (record.kind !== 'openai') {
-            throw new Error(`${key} 不是 OpenAI 兼容服务（识别为 ${record.kind}），不能装载成对话模型`)
+          let models: { id: string; name?: string }[]
+          let displayName: string
+          if (record) {
+            if (record.kind !== 'openai') {
+              throw new Error(`${key} 不是 OpenAI 兼容服务（识别为 ${record.kind}），不能装载成对话模型`)
+            }
+            models = record.models.map((m) => ({ id: m.id, name: m.id }))
+            displayName = `${record.software ?? 'LAN'} · ${record.host}:${record.port}`
+          } else {
+            const probe = await probeServiceUrl(key)
+            if (probe.kind !== 'openai') {
+              throw new Error(`${key} 未响应 OpenAI 兼容接口（识别为 ${probe.kind}）`)
+            }
+            models = probe.models.map((m) => ({ id: m.id, name: m.id }))
+            displayName = probe.software ? `${probe.software} · ${new URL(key).host}` : new URL(key).host
           }
-          const models = Array.isArray(body?.models) && body.models.length > 0
-            ? body.models.map((m: unknown) => ({ id: String(m) }))
-            : record.models.map((m) => ({ id: m.id, name: m.id }))
-          const displayName =
-            typeof body?.displayName === 'string' && body.displayName.trim() !== ''
-              ? body.displayName
-              : `${record.software ?? 'LAN'} · ${record.host}:${record.port}`
+          if (Array.isArray(body?.models) && body.models.length > 0) {
+            models = body.models.map((m: unknown) => ({ id: String(m) }))
+          }
+          if (models.length === 0) throw new Error(`${key} 没有返回任何模型`)
+
           const mounted = await mountProvider(ctx, {
-            providerId: typeof body?.providerId === 'string' && body.providerId !== '' ? body.providerId : providerIdFor(record.key),
-            displayName,
-            baseURL: record.key,
+            providerId: typeof body?.providerId === 'string' && body.providerId !== '' ? body.providerId : providerIdFor(key),
+            displayName: typeof body?.displayName === 'string' && body.displayName.trim() !== '' ? body.displayName : displayName,
+            baseURL: record ? record.key : key,
             models,
           })
           send(res, 200, { mounted, providers: listMounted(ctx) })
