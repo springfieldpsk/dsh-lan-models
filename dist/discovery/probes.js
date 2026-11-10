@@ -97,6 +97,11 @@ export async function probeService(host, port, timeoutMs = 2500) {
         const software = await sniffSoftware(base, timeoutMs);
         return { kind: 'openai', software, models };
     }
+    // Key-protected endpoint (oMLX bound to 0.0.0.0 answers 401 here) is still an
+    // OpenAI-compatible service; it just cannot lend us its model list unauthenticated.
+    if (v1 && (v1.status === 401 || v1.status === 403)) {
+        return { kind: 'openai', software: 'OpenAI 兼容（需 API Key）', models: [] };
+    }
     return null;
 }
 /**

@@ -30,6 +30,7 @@ window.__ModuleLoader__.load({
         models: '个模型',
         noModels: '无模型清单',
         notChat: '非对话服务',
+        needKey: '需 API Key（用上方手动装载）',
         truncated: '扫描被时限截断，结果可能不完整（调大 scanDeadlineSeconds 后重扫）。',
         failed: '操作失败',
         manual: '手动装载地址',
@@ -211,19 +212,21 @@ window.__ModuleLoader__.load({
                 : null,
             ),
             isChat
-              ? mountedThis
-                ? h('span', { style: Object.assign({}, dim, { fontSize: '12px' }) }, t.mountedTag)
-                : h(
-                    'button',
-                    {
-                      style: btnPrimary,
-                      disabled: busyId !== '',
-                      onClick: function () {
-                        act('/lan-models/mount', { key: svc.key }, svc.key);
+              ? svc.models.length === 0
+                ? h('span', { style: Object.assign({}, dim, { fontSize: '12px' }) }, t.needKey)
+                : mountedThis
+                  ? h('span', { style: Object.assign({}, dim, { fontSize: '12px' }) }, t.mountedTag)
+                  : h(
+                      'button',
+                      {
+                        style: btnPrimary,
+                        disabled: busyId !== '',
+                        onClick: function () {
+                          act('/lan-models/mount', { key: svc.key }, svc.key);
+                        },
                       },
-                    },
-                    busyId === svc.key ? t.loading2 : t.load,
-                  )
+                      busyId === svc.key ? t.loading2 : t.load,
+                    )
               : h('span', { style: dim }, t.notChat),
           );
         });
