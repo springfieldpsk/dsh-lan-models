@@ -26,6 +26,8 @@ export interface MountSpec {
   displayName: string
   baseURL: string
   models: LanModelSpec[]
+  /** Bearer token for endpoints that require one (oMLX refuses a non-loopback bind without a key). */
+  apiKey?: string
 }
 
 export interface MountedProvider {
@@ -167,6 +169,9 @@ export async function mountProvider(ctx: Context, spec: MountSpec): Promise<Moun
       api: 'openai-completions',
       baseURL,
       models,
+      ...(spec.apiKey && spec.apiKey.trim() !== ''
+        ? { headers: { Authorization: `Bearer ${spec.apiKey.trim()}` } }
+        : {}),
       defaultContextWindow: 131072,
       defaultMaxTokens: 8192,
     }

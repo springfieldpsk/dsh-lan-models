@@ -34,7 +34,8 @@ window.__ModuleLoader__.load({
         failed: '操作失败',
         manual: '手动装载地址',
         manualPlaceholder: 'http://127.0.0.1:18000（仅监听回环的服务可用 SSH 隧道转发到本机）',
-        manualHint: '扫描发现不了 127.0.0.1 上的服务：先 ssh -L 18000:127.0.0.1:8000 <mac> 建隧道，再把 http://127.0.0.1:18000 填进来。',
+        apiKeyPlaceholder: 'API Key（可选；oMLX 绑 0.0.0.0 时必填）',
+        manualHint: '扫描发现不了 127.0.0.1 上的服务：先 ssh -L 18000:127.0.0.1:8000 <mac> 建隧道，再把 http://127.0.0.1:18000 填进来。绑 0.0.0.0 的服务要在下面填 API Key。',
         hint: '装载会写入 llm-pi-ai 的 provider 配置；卸载只删除本插件装载的 lan-* 路由。',
       },
       en: {
@@ -119,6 +120,9 @@ window.__ModuleLoader__.load({
         var manual = useState('');
         var manualUrl = manual[0];
         var setManualUrl = manual[1];
+        var keyState = useState('');
+        var apiKey = keyState[0];
+        var setApiKey = keyState[1];
 
         var load = useCallback(function () {
           set({ loading: true, error: null, data: s.data });
@@ -276,13 +280,34 @@ window.__ModuleLoader__.load({
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
               },
             }),
+            h('input', {
+              value: apiKey,
+              type: 'password',
+              placeholder: t.apiKeyPlaceholder,
+              onChange: function (event) {
+                setApiKey(event.target.value);
+              },
+              style: {
+                width: '230px',
+                padding: '5px 8px',
+                borderRadius: '6px',
+                border: '1px solid var(--dsw-alias-border, rgba(127,127,127,0.3))',
+                background: 'transparent',
+                color: 'inherit',
+                fontSize: '12px',
+              },
+            }),
             h(
               'button',
               {
                 style: btnPrimary,
                 disabled: busyId !== '' || String(manualUrl).trim() === '',
                 onClick: function () {
-                  act('/lan-models/mount', { key: String(manualUrl).trim() }, 'manual');
+                  act(
+                    '/lan-models/mount',
+                    { key: String(manualUrl).trim(), apiKey: String(apiKey).trim() || undefined },
+                    'manual',
+                  );
                 },
               },
               busyId === 'manual' ? t.loading2 : t.load,

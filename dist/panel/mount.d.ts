@@ -19,6 +19,8 @@ export interface MountSpec {
     displayName: string;
     baseURL: string;
     models: LanModelSpec[];
+    /** Bearer token for endpoints that require one (oMLX refuses a non-loopback bind without a key). */
+    apiKey?: string;
 }
 export interface MountedProvider {
     providerId: string;

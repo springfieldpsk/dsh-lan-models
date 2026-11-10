@@ -65,6 +65,23 @@ async function readJson(req: IncomingMessage): Promise<any> {
   return JSON.parse(text)
 }
 
+/** Authenticated `/v1/models`: the key-protected path (oMLX on 0.0.0.0 needs one). */
+async function listModelsWithKey(key: string, apiKey: string): Promise<{ id: string }[] | null> {
+  try {
+    const url = key.replace(/\/+$/, '')
+    const res = await fetch(`${url}/v1/models`, {
+      headers: { authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(6000),
+    })
+    if (!res.ok) return null
+    const body = (await res.json()) as { data?: Array<{ id?: unknown }> }
+    const ids = (body.data ?? []).map((m) => m.id).filter((id): id is string => typeof id === 'string' && id !== '')
+    return ids.length > 0 ? ids.map((id) => ({ id })) : null
+  } catch {
+    return null
+  }
+}
+
 export function registerLanPanelRoutes(ctx: Context, registry: LanRegistry, _config: Config): () => void {
   const holder = ctx as unknown as { webServer?: { register(route: unknown): () => void } }
   const server = holder.webServer
@@ -128,12 +145,19 @@ export function registerLanPanelRoutes(ctx: Context, registry: LanRegistry, _con
             models = record.models.map((m) => ({ id: m.id, name: m.id }))
             displayName = `${record.software ?? 'LAN'} · ${record.host}:${record.port}`
           } else {
-            const probe = await probeServiceUrl(key)
-            if (probe.kind !== 'openai') {
-              throw new Error(`${key} 未响应 OpenAI 兼容接口（识别为 ${probe.kind}）`)
+            const apiKey = typeof body?.apiKey === 'string' ? body.apiKey.trim() : ''
+            const authed = apiKey !== '' ? await listModelsWithKey(key, apiKey) : null
+            if (authed) {
+              models = authed
+              displayName = new URL(key).host
+            } else {
+              const probe = await probeServiceUrl(key)
+              if (probe.kind !== 'openai') {
+                throw new Error(`${key} 未响应 OpenAI 兼容接口（识别为 ${probe.kind}）`)
+              }
+              models = probe.models.map((m) => ({ id: m.id, name: m.id }))
+              displayName = probe.software ? `${probe.software} · ${new URL(key).host}` : new URL(key).host
             }
-            models = probe.models.map((m) => ({ id: m.id, name: m.id }))
-            displayName = probe.software ? `${probe.software} · ${new URL(key).host}` : new URL(key).host
           }
           if (Array.isArray(body?.models) && body.models.length > 0) {
             models = body.models.map((m: unknown) => ({ id: String(m) }))
@@ -145,6 +169,7 @@ export function registerLanPanelRoutes(ctx: Context, registry: LanRegistry, _con
             displayName: typeof body?.displayName === 'string' && body.displayName.trim() !== '' ? body.displayName : displayName,
             baseURL: record ? record.key : key,
             models,
+            apiKey: typeof body?.apiKey === 'string' ? body.apiKey : undefined,
           })
           send(res, 200, { mounted, providers: listMounted(ctx) })
           return

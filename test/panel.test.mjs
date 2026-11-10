@@ -61,6 +61,19 @@ test('mount writes an openai-completions route and keeps other providers', async
   )
 })
 
+test('mount carries a bearer token as provider headers', async () => {
+  const ctx = fakeCtx()
+  await mountProvider(ctx, {
+    providerId: 'lan-192-168-5-115-8000',
+    displayName: 'Mac',
+    baseURL: 'http://192.168.5.115:8000',
+    models: [{ id: 'm' }],
+    apiKey: 'secret-token',
+  })
+  const profile = ctx.configEditor.entries()[0].options.config.providers['lan-192-168-5-115-8000']
+  assert.deepEqual(profile.headers, { Authorization: 'Bearer secret-token' })
+})
+
 test('unmount removes only this plugin route', async () => {
   const ctx = fakeCtx()
   await mountProvider(ctx, {

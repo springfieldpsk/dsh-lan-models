@@ -124,6 +124,9 @@ export async function mountProvider(ctx, spec) {
             api: 'openai-completions',
             baseURL,
             models,
+            ...(spec.apiKey && spec.apiKey.trim() !== ''
+                ? { headers: { Authorization: `Bearer ${spec.apiKey.trim()}` } }
+                : {}),
             defaultContextWindow: 131072,
             defaultMaxTokens: 8192,
         };
